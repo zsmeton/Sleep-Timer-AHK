@@ -1,0 +1,81 @@
+SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
+#NoEnv
+SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
+#SingleInstance force ; Automatically replaces last instance
+
+!a:: ;Alt + s activate hotkey
+; Creates gui for user input
+Gui, New
+Gui, Color, 333232
+Gui, -SysMenu -Caption -Border 
+Gui, Add, Text,, How many minutes?
+Gui, Add, Edit, vx ym  ; The ym option starts a new column of controls.
+Gui, Add, Button, default, OK  ; The label ButtonOK (if it exists) will be run when the button is pressed.
+Gui, Show,, Simple Input Example
+return
+GuiClose:
+ButtonOK:
+Gui, Submit  ; Save the input from the user to each control's associated variable.
+;GUI Created and Set up
+
+time:=x*60*1000 ; Changes minutes to milliseconds
+SoundGet, volume ; Gets current volume
+OutputDebug, %volume% Timer: starting volume ; Prints the start volume in debug
+interval:= 200
+dropInterval:=x*interval ; sets the rate of decreasing volume to 3 times a minute
+Timer:= time/dropInterval ; sets the delay in the program proportional to run time and drop interval
+OutputDebug, %dropInterval%
+; Calculations to find exponential volume function
+linearMatch:= 3  ; finds (v/c) in function (v/c)=(1/k)(e^(kt)-1)
+k:= Loopidy(x, volume, linearMatch)
+OutputDebug, %k% This K Defined Outside Loopidy
+global MyProgress
+Loopidy(x, volume, linearMatch){
+;Create Loading GUI
+Gui, New
+Gui, Color, 333232
+Gui, -SysMenu -Caption -Border 
+Gui, Add, Picture, center, O:\Zach\Photoshop\LoadingScreenSleepTimer.jpg
+Gui, Add, Progress, Range0-10000 c0074cd Background333232 xp+6 wp-20 yp+40 vMyProgress
+Gui, Show, h90
+;GUI Created
+   Loop 10000{
+      k:= (A_Index/10000)-1
+      GuiControl,, MyProgress, %A_Index%
+      output:= 30*Exp(k*x)
+      if (output >= linearMatch) {
+         OutputDebug,  %k% K value
+         Sleep 1000
+         ToolTip
+         Gui, Destroy
+         return k  
+      }
+   }
+}
+
+Gui, New
+Gui, Color, 333232
+Gui, -SysMenu -Caption -Border +AlwaysOnTop
+Gui, Add, Picture, center, O:\Zach\Photoshop\VolumeScreenSleepTimer.jpg
+Gui, Add, Progress, Range0-%volume% c0074cd Background333232 xp+6 wp-20 yp+40 vvolumeProgression
+Gui, Show, h90 x1 y1
+
+Loop %dropInterval% { ; loops based on amount of drop intervals
+   soundDrop:= volume*Exp(k*((A_Index-1)/interval))
+   progres:= x-((A_Index-1)/interval)
+   OutputDebug, %soundDrop% %progres%
+   SoundSet, soundDrop ; reduces volume
+   SoundGet, currentVolume 
+   OutputDebug, %currentVolume% Timer: current volume ; prints to debug new volume
+   GuiControl,, volumeProgression, %currentVolume%
+   Sleep,Timer
+   }
+Send {Media_Play_Pause} ; pauses media
+OutputDebug, Timer: paused
+Sleep, 1000
+SoundSet, volume ; sets volume to initial volume before hotkey use
+SoundGet, endVolume
+OutputDebug, %endVolume% Timer: resetting volume  
+Return
+
+Esc::ExitApp  ;Escape key will exit... place this at th
